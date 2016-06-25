@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    >
+
+    <item
+        android:id="@+id/share"
+        android:icon="@mipmap/share"
+
+        android:title="share"
+        app:showAsAction="always"
+        >
+
+    </item>
+    <item
+        android:id="@+id/celect"
+        android:icon="@mipmap/collect"
+        android:title="celect"
+        app:showAsAction="always"
+        >
+
+    </item>
+
+</menu>
