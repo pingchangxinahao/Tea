@@ -1,0 +1,426 @@
+package com.yxwifi.widget;
+
+import android.content.Context;
+import android.graphics.Point;
+import android.util.AttributeSet;
+import android.view.MotionEvent;
+import android.view.View;
+import android.widget.ImageView;
+import android.widget.RelativeLayout;
+
+import com.fh.listener.RudderListener;
+import com.fh.util.MathUtils;
+import com.yxwifi.rxdrone.R;
+
+//import com.micro.util.LogUtils;
+//import android.util.Log;
+
+/**
+ * Created by micro on 2015/10/14.
+ */
+public class RockerBgView extends RelativeLayout {
+	public static final int ACTION_RUDDER = 1, ACTION_ATTACK = 2; // 1：摇杆事件
+																	// 2：按钮事件（未实现）
+	private static final String TAG = "RockerBgView";
+	private Context mContext;
+	private boolean isStop = false;
+	// private Paint mPaint;
+	private Point mRockerPosition = new Point(185, 185);// 摇杆位置
+	private Point mCtrlPoint = new Point(185, 185);// 摇杆起始位置
+	private Point cCtrlPoint = new Point(185, 185);// 摇杆起始位置
+
+	private int mRudderRadius = 69;// 摇杆半径
+	private int mWheelRadius = 240;// 摇杆活动范围半径
+	// private int mWidth,mHeight;
+	private int offsetX, offsetY;
+	private ImageView rudderBtnWheel;
+	private ImageView rudderBtn;
+	private RudderListener listener = null; // 事件回调接口
+	private int queueLen = 9;
+	private float[] xQueue = new float[queueLen];
+	private float[] yQueue = new float[queueLen];
+	
+	private boolean down=false;
+	private PathView pathView;
+	private int speed;
+	private boolean isHold;
+
+	public int getmRudderRadius() {
+		if (null != rudderBtn) {
+			mRudderRadius = rudderBtn.getWidth() / 2;
+		}
+		return mRudderRadius;
+	}
+
+	public int getmWheelRadius() {
+		if (null != rudderBtnWheel) {
+			mWheelRadius = rudderBtnWheel.getWidth() / 2;
+//			Log.e(TAG, "getmWheel");
+		}
+		return mWheelRadius;
+	}
+
+	public RockerBgView(Context context) {
+		super(context);
+		mContext = context;
+		initQueue();
+		//initValue(attrs);
+		this.setKeepScreenOn(true);
+		initView();
+		// mPaint = new Paint();
+		// mPaint.setColor(Color.GRAY);
+		// mPaint.setAlpha(0);
+		// mPaint.setAntiAlias(true);//抗锯齿
+		// mRockerPosition = new Point(mCtrlPoint);
+		setFocusable(true);
+		setFocusableInTouchMode(true);
+	}
+
+
+	public void setSpeed(int speed){
+		this.speed = speed;
+	}
+
+	public RockerBgView(Context context, AttributeSet attrs) {
+		super(context, attrs);
+		mContext = context;
+		initQueue();
+		initValue(attrs);
+		this.setKeepScreenOn(true);
+		initView();
+		// mPaint = new Paint();
+		// mPaint.setColor(Color.GRAY);
+		// mPaint.setAlpha(0);
+		// mPaint.setAntiAlias(true);//抗锯齿
+		// mRockerPosition = new Point(mCtrlPoint);
+		setFocusable(true);
+		setFocusableInTouchMode(true);
+
+	}
+
+	public RockerBgView(Context context, AttributeSet attrs, int defStyle) {
+		super(context, attrs, defStyle);
+		mContext = context;
+		initQueue();
+		initValue(attrs);
+	}
+
+	public int getWheelRadius() {
+		return mWheelRadius;
+	}
+
+	public void setWheelRadius(int mWheelRadius) {
+		this.mWheelRadius = mWheelRadius;
+	}
+
+	public Point getCtrlPoint() {
+		return mCtrlPoint;
+	}
+
+	public void setCtrlPoint(Point point) {
+
+		// int vx = (int) xAVG(((mRockerPosition.x - offsetX) / (2.0f *
+		// mWheelRadius)) * 256);
+		// int vy = (int) yAVG(((mRockerPosition.y - offsetY) / (2.0f *
+		// mWheelRadius)) * 256);
+		float fx = xAVGf(point.x);
+		float fy = yAVGf(point.y);
+		int vx = (int) ((fx * mWheelRadius) / 128) + offsetX;
+		int vy = (int) ((fy * mWheelRadius) / 128) + offsetY;
+		this.mCtrlPoint = new Point(vx, vy);
+		mRockerPosition = new Point(mCtrlPoint);
+//		LogUtils.i("AVGf:" + fx + "," + fy);
+//		LogUtils.i("mCtrlPoint:" + mCtrlPoint.toString());
+//		LogUtils.i("mRockerPosition:" + mRockerPosition.toString());
+		if (null != mRockerPosition) {
+			setRockerPosition(mRockerPosition);
+//			if (listener != null) {
+//				listener.onSteeringWheelChanged(ACTION_RUDDER, point);
+//			}
+		}
+		this.postInvalidate();
+	}
+
+	private void initValue(AttributeSet attrs) {
+		// TypedArray a = mContext.obtainStyledAttributes(attrs,
+		// R.styleable.RxRudder);
+		// int ctrlX = a.getInteger(R.styleable.RxRudder_ctrlX, 300);
+		// int ctrlY = a.getInteger(R.styleable.RxRudder_ctrlY, 300);
+		// mCtrlPoint = new Point(ctrlX, ctrlY);
+		// mRudderRadius = a.getInteger(R.styleable.RxRudder_rudderRadius, 40);
+		// mWheelRadius = a.getInteger(R.styleable.RxRudder_wheelRadius, 255);
+		// offsetX = mCtrlPoint.x - mWheelRadius;
+		// offsetY = mCtrlPoint.y - mWheelRadius;
+
+	}
+
+	private void initView() {
+		View.inflate(mContext, R.layout.widget_rx_rudder, this);
+		rudderBtnWheel = (ImageView) findViewById(R.id.rudderBtnWheel);
+		rudderBtn = (ImageView) findViewById(R.id.rudderBtn);
+		pathView = (PathView) findViewById(R.id.rocker_pathview);
+		pathView.setRocker(this);
+		// mRudderRadius = rudderBtn.getWidth()/2;
+		// mWheelRadius = rudderBtnWheel.getWidth()/2-mRudderRadius;
+
+		// setWheelPosition(mCtrlPoint);
+		// setRockerPosition(mCtrlPoint);
+	}
+	public void setPathViwVisib(boolean v){
+		if (v){
+			pathView.setVisibility(VISIBLE);
+		}else {
+			pathView.setVisibility(GONE);
+		}
+	}
+
+
+	public void setWheelVisib(boolean v){
+		if (v){
+			rudderBtnWheel.setVisibility(VISIBLE);
+			rudderBtn.setVisibility(VISIBLE);
+		}else {
+			rudderBtnWheel.setVisibility(GONE);
+			rudderBtn.setVisibility(GONE);
+		}
+	}
+
+	// 设置回调接口
+	public void setRudderListener(RudderListener rockerListener) {
+		listener = rockerListener;
+	}
+
+	private void setRockerPosition(Point point) {
+		if (null == point) {
+			return;
+		}
+		int left = point.x - mRudderRadius;
+		int top = point.y - mRudderRadius;
+		int right = point.x + mRudderRadius;
+		int bottom = point.y + mRudderRadius;
+		// Log.i(TAG, "x=" + point.x + ",y=" + point.y + ",left=" + left +
+		// ",top=" + top + ",right=" + right + ",bottom="
+		// + bottom);
+
+		rudderBtn.layout(left, top, right, bottom);
+		rudderBtn.postInvalidate();
+
+		this.postInvalidate();
+	}
+
+	public void setWheelPosition(Point point) {
+		int hw = rudderBtnWheel.getWidth() / 2;
+		int left = point.x - hw;
+		int top = point.y - hw;
+		int right = point.x + hw;
+		int bottom = point.y + hw;
+		// Log.i(TAG,
+		// "x=" + point.x + ",y=" + point.y + ",mWheelRadius=" + mWheelRadius +
+		// ",mRudderRadius=" + mRudderRadius);
+		rudderBtnWheel.layout(left, top, right, bottom);
+		rudderBtnWheel.postInvalidate();
+
+		this.postInvalidate();
+	}
+	int offetx =0;
+	int offety = 0;
+	@Override
+	public boolean onTouchEvent(MotionEvent event) {
+		System.out.println("touchshijian");
+		float x = event.getX();
+		float y = event.getY();
+		int vx = 128;
+		int vy = 128;
+		int len = MathUtils.getLength(mCtrlPoint.x, mCtrlPoint.y, x, y);
+		if (event.getAction() == MotionEvent.ACTION_DOWN) {
+			// 如果屏幕接触点不在摇杆挥动范围内,则不处
+			System.out.println("执行down");
+			if (isDrawLine) {
+				offetx = (int) x - cCtrlPoint.x;
+				offety = (int) y - cCtrlPoint.y;
+
+				setWheelPosition(new Point((int) x, (int) y));
+				setRockerPosition(new Point((int) x, (int) y));
+				this.mCtrlPoint = new Point((int) x, (int) y);
+			}
+			//setCtrlPoint(new Point((int) x, (int) y));
+			if (len > mWheelRadius) {
+				return true;
+			}
+			down=true;
+		}
+//		Log.i(TAG, "len=" + len + ",x=" + x + ",y=" + y + ",cx=" + mCtrlPoint.x + ",cy=" + mCtrlPoint.y);
+		if (event.getAction() == MotionEvent.ACTION_MOVE) {
+			System.out.println("执行move");
+			if (len <= mWheelRadius) {
+				// 如果手指在摇杆活动范围内，则摇杆处于手指触摸位置
+				System.out.println("执行move1");
+				mRockerPosition.set((int) x, (int) y);
+			} else {
+				// 设置摇杆位置，使其处于手指触摸方向的 摇杆活动范围边缘
+				System.out.println("执行move2");
+				mRockerPosition = MathUtils.getBorderPoint(mCtrlPoint, new Point((int) x, (int) y), mWheelRadius);
+				if (!MathUtils.inCircle(mRockerPosition.x, mRockerPosition.y, mCtrlPoint, mWheelRadius)) {
+					mRockerPosition = MathUtils.getBorderPoint(mCtrlPoint, new Point((int) x, (int) y), mWheelRadius);
+				}
+
+			}
+			/*vx = (int) xAVG(((mRockerPosition.x -offetx- offsetX) / (2.0f * mWheelRadius)) * 256);
+			vy = (int) yAVG(((mRockerPosition.y -offety- offsetY) / (2.0f * mWheelRadius)) * 256);*/
+
+			if (speed==2) {
+				vx = (int) (0+(mRockerPosition.x-offetx-offsetX)*(256/(2.0f*mWheelRadius)));
+				vy = (int) (0+((2.0f*mWheelRadius)-(mRockerPosition.y-offsetY))*(255/(2.0f*mWheelRadius)));
+			}
+			if (speed==1){
+				vx = (int) (50+(mRockerPosition.x-offetx-offsetX)*(156/(2.0f*mWheelRadius)));
+				vy = (int) (50+((2.0f*mWheelRadius)-(mRockerPosition.y-offety-offsetY))*(156/(2.0f*mWheelRadius)));
+			}if (speed==0){
+				vx = (int) (90+(mRockerPosition.x-offetx-offsetX)*(76/(2.0f*mWheelRadius)));
+				vy = (int) (90+((2.0f*mWheelRadius)-(mRockerPosition.y-offety-offsetY))*(76/(2.0f*mWheelRadius)));
+			}
+			/*vx = (int) ((mRockerPosition.x -offetx- offsetX) / (2.0f * mWheelRadius)) * 256;
+			vy = (int) ((mRockerPosition.y -offety- offsetY) / (2.0f * mWheelRadius)) * 256;*/
+
+			/*vx = (int) (0+(mRockerPosition.x-offetx-offsetX)*(256/(2.0f*mWheelRadius)));
+			vy = (int) (0+((2.0f*mWheelRadius)-(mRockerPosition.y-offety-offsetY))*(256/(2.0f*mWheelRadius)));*/
+//			
+//			Log.i(TAG, "ACTION_MOVE:cx=" + mRockerPosition.x + ",cy=" + mRockerPosition.y);
+		}
+		// 如果手指离开屏幕，则摇杆返回初始位置
+		if (event.getAction() == MotionEvent.ACTION_UP) {
+			if (isHold){
+				mRockerPosition = new Point(mCtrlPoint.x,mRockerPosition.y);
+			}else {
+				mRockerPosition = new Point(mCtrlPoint);
+			}
+			vx = (int) (((mRockerPosition.x -offetx- offsetX) / (2.0f * mWheelRadius)) * 256);
+			vy = (int) (((mRockerPosition.y -offety- offsetY) / (2.0f * mWheelRadius)) * 256);
+			down=false;
+//			Log.i(TAG, "ACTION_UP:cx=" + mRockerPosition.x + ",cy=" + mRockerPosition.y);
+		}
+		if (null != mRockerPosition) {
+			setRockerPosition(mRockerPosition);
+			System.out.println("发送数据x"+vx+"  y"+vy);
+			if (listener != null) {
+				// float radian = MathUtils.getRadian(mCtrlPoint, new
+				// Point((int) event.getX(), (int) event.getY()));
+				System.out.println("发送数据1");
+				listener.onSteeringWheelChanged(ACTION_RUDDER, new Point(vx, vy));
+			}
+		}
+		this.postInvalidate();
+		return true;
+	}
+	private boolean isDrawLine;
+	public void setDrawLineEnable(boolean enable){
+		isDrawLine = enable;
+		if (!isDrawLine){
+			offetx=0;
+			offety=0;
+			mCtrlPoint = cCtrlPoint;
+			setWheelPosition(mCtrlPoint);
+			setRockerPosition(mCtrlPoint);
+			pathView.finishFlyAnim();
+		}
+	}
+
+	public void setHold(boolean hold){
+		isHold = hold;
+		if (isHold){
+			mRockerPosition = new Point(mCtrlPoint.x,mCtrlPoint.y+getWheelRadius());
+		}else {
+			mRockerPosition = new Point(mCtrlPoint);
+		}
+		setRockerPosition(mRockerPosition);
+	}
+
+	@Override
+	public void onWindowFocusChanged(boolean hasWindowFocus) {
+		super.onWindowFocusChanged(hasWindowFocus);
+		if (hasWindowFocus) {
+			// setWheelPosition(mCtrlPoint);
+
+			mRudderRadius = rudderBtn.getWidth() / 2;
+			mCtrlPoint = new Point(rudderBtn.getLeft() + mRudderRadius, rudderBtn.getTop() + mRudderRadius);
+			cCtrlPoint = mCtrlPoint;
+			mWheelRadius = (int) (rudderBtnWheel.getWidth() / 2 - rudderBtn.getWidth()*0.8);
+			// int left = mCtrlPoint.x - mRudderRadius;
+			// int top = mCtrlPoint.y - mRudderRadius;
+			// int right = mCtrlPoint.x + mRudderRadius;
+			// int bottom = mCtrlPoint.y + mRudderRadius;
+			// rudderBtn.layout(left, top, right, bottom);
+			//
+			// int left2 = mCtrlPoint.x - mWheelRadius;
+			// int top2 = mCtrlPoint.y - mWheelRadius;
+			// int right2 = mCtrlPoint.x + mWheelRadius;
+			// int bottom2 = mCtrlPoint.y + mWheelRadius;
+			// rudderBtnWheel.layout(left2, top2, right2, bottom2);
+
+			offsetX = mCtrlPoint.x - mWheelRadius;
+			offsetY = mCtrlPoint.y - mWheelRadius;
+
+			this.postInvalidate();
+//			Log.i(TAG, "mWheelRadius=" + mWheelRadius + ",mRudderRadius=" + mRudderRadius + ",offsetX=" + offsetX
+//					+ ",offsetY=" + offsetY + "mCtrlPoint:" + mCtrlPoint.toString());
+		}
+	}
+
+	private void initQueue() {
+		for (int i = 0; i < queueLen; i++) {
+			xQueue[i] = 0f;
+		}
+		for (int i = 0; i < queueLen; i++) {
+			yQueue[i] = 0f;
+		}
+	}
+
+	private float xAVG(float x) {
+		float t = 0;
+		for (int i = 1; i < queueLen; i++) {
+			xQueue[i - 1] = xQueue[i];
+			t += xQueue[i - 1];
+		}
+		xQueue[queueLen - 1] = x;
+		t += x;
+
+		return t / queueLen;
+	}
+
+	private float yAVG(float x) {
+		float t = 0;
+		for (int i = 1; i < queueLen; i++) {
+			yQueue[i - 1] = yQueue[i];
+			t += yQueue[i - 1];
+		}
+		yQueue[queueLen - 1] = x;
+		t += x;
+
+		return t / queueLen;
+	}
+
+	private float xAVGf(float t) {
+		float x = t;
+		// x = x * queueLen;
+		for (int i = 1; i < queueLen; i++) {
+			xQueue[i - 1] = xQueue[i];
+			// x -= xQueue[i - 1];
+		}
+		xQueue[queueLen - 1] = x;
+
+		return x;
+	}
+
+	private float yAVGf(float t) {
+		float x = t;
+		for (int i = 1; i < queueLen; i++) {
+			xQueue[i - 1] = xQueue[i];
+		}
+		yQueue[queueLen - 1] = x;
+
+		return x;
+	}
+	public boolean getState(){
+		return down;
+	}
+}
