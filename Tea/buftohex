@@ -1,0 +1,259 @@
+//
+// Source code recreated from a .class file by IntelliJ IDEA
+// (powered by Fernflower decompiler)
+//
+
+package com.jieli.lib.dv.control.utils;
+
+public class BufChangeHex {
+    private static final char[] a = new char[]{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+    private static final char[] b = new char[]{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+
+    public BufChangeHex() {
+    }
+
+    public static char[] encodeHex(byte[] var0) {
+        return encodeHex(var0, true);
+    }
+
+    public static char[] encodeHex(byte[] var0, boolean var1) {
+        return encodeHex(var0, var1?a:b);
+    }
+
+    protected static char[] encodeHex(byte[] var0, char[] var1) {
+        int var2 = var0.length;
+        char[] var3 = new char[(var2 << 1) + var2];
+        int var4 = 0;
+
+        for(int var5 = 0; var4 < var2; ++var4) {
+            var3[var5++] = var1[(240 & var0[var4]) >>> 4];
+            var3[var5++] = var1[15 & var0[var4]];
+            var3[var5++] = 32;
+        }
+
+        return var3;
+    }
+
+    protected static char[] encodeHex2(byte[] var0, char[] var1) {
+        int var2 = var0.length;
+        char[] var3 = new char[var2 << 1];
+        int var4 = 0;
+
+        for(int var5 = 0; var4 < var2; ++var4) {
+            var3[var5++] = var1[(240 & var0[var4]) >>> 4];
+            var3[var5++] = var1[15 & var0[var4]];
+        }
+
+        return var3;
+    }
+
+    public static String str2HexStr(String var0) {
+        char[] var1 = "0123456789ABCDEF".toCharArray();
+        StringBuilder var2 = new StringBuilder();
+        byte[] var3 = var0.getBytes();
+        byte[] var5 = var3;
+        int var6 = var3.length;
+
+        for(int var7 = 0; var7 < var6; ++var7) {
+            byte var8 = var5[var7];
+            int var4 = (var8 & 240) >> 4;
+            var2.append(var1[var4]);
+            var4 = var8 & 15;
+            var2.append(var1[var4]);
+        }
+
+        return var2.toString().trim();
+    }
+
+    public static String encodeHexStr(byte[] var0) {
+        return encodeHexStr(var0, true);
+    }
+
+    public static String encodeHexStr(byte[] var0, boolean var1) {
+        return encodeHexStr(var0, var1?a:b);
+    }
+
+    protected static String encodeHexStr(byte[] var0, char[] var1) {
+        return new String(encodeHex(var0, var1));
+    }
+
+    public static byte[] decodeHex(char[] var0) {
+        int var1 = var0.length;
+        if((var1 & 1) != 0) {
+            throw new RuntimeException("Odd number of characters.");
+        } else {
+            byte[] var2 = new byte[var1 >> 1];
+            int var3 = 0;
+
+            for(int var4 = 0; var4 < var1; ++var3) {
+                int var5 = a(var0[var4], var4) << 4;
+                ++var4;
+                var5 |= a(var0[var4], var4);
+                ++var4;
+                var2[var3] = (byte)(var5 & 255);
+            }
+
+            return var2;
+        }
+    }
+
+    private static int a(char var0, int var1) {
+        int var2 = Character.digit(var0, 16);
+        if(var2 == -1) {
+            throw new RuntimeException("Illegal hexadecimal character " + var0 + " at index " + var1);
+        } else {
+            return var2;
+        }
+    }
+
+    public static char convertIntToAscii(int var0) {
+        return var0 >= 0 && var0 <= 255?(char)var0:'\u0000';
+    }
+
+    public static byte[] contructIntTo2B(int var0) {
+        byte[] var1 = new byte[]{(byte)(var0 & 255), (byte)(var0 >> 8 & 255)};
+        return var1;
+    }
+
+    public static byte[] intToByteArray(int var0) {
+        byte[] var1 = new byte[]{(byte)(var0 & 255), (byte)(var0 >> 8 & 255), (byte)(var0 >> 16 & 255), (byte)(var0 >> 24 & 255)};
+        return var1;
+    }
+
+    public static int byteArrayToInt(byte[] var0) {
+        byte[] var1 = new byte[4];
+        int var2 = 0;
+
+        for(int var3 = 0; var2 < 4; ++var3) {
+            if(var3 < var0.length) {
+                var1[var2] = var0[var3];
+            } else {
+                var1[var2] = 0;
+            }
+
+            ++var2;
+        }
+
+        int var4 = (var1[3] & 255) << 24;
+        int var5 = (var1[2] & 255) << 16;
+        int var6 = (var1[1] & 255) << 8;
+        int var7 = var1[0] & 255;
+        return var4 + var5 + var6 + var7;
+    }
+}
+
+
+
+public static byte[] getPackage(CmdInfo var0) {
+        byte[] var1 = "CTP:".getBytes();
+        byte[] var2 = var0.getTopic().getBytes();
+        short var3 = (short)var2.length;
+        byte[] var4 = null;
+        int var5 = 0;
+        int var6 = "CTP:".length() + 2 + var3 + 4;
+        if(!TextUtils.isEmpty(var0.getOperation())) {
+            var4 = a(var0).getBytes();
+            var5 = var4.length;
+            var6 += var5;
+        }
+
+        byte var7 = 0;
+        byte[] var9 = new byte[var6];
+        System.arraycopy(var1, 0, var9, var7, var1.length);
+        int var10 = var7 + var1.length;
+        ByteBuffer var8 = ByteBuffer.allocate(2).order(ByteOrder.LITTLE_ENDIAN);
+        var8.putShort(var3);
+        System.arraycopy(var8.array(), 0, var9, var10, 2);
+        var8.clear();
+        var10 += 2;
+        System.arraycopy(var2, 0, var9, var10, var3);
+        var10 += var3;
+        var8 = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN);
+        var8.putInt(var5);
+        System.arraycopy(var8.array(), 0, var9, var10, 4);
+        var8.clear();
+        var10 += 4;
+        if(var4 != null) {
+            System.arraycopy(var4, 0, var9, var10, var5);
+        }
+
+        return var9;
+    }
+    
+    
+    
+    
+    Socket var2 = (Socket)this.mSocketWeakReference.get();
+            if(var2 != null && !var2.isClosed()) {
+                try {
+                    InputStream var3 = var2.getInputStream();
+                    if(var3 != null && var3.available() > 0) {
+                        byte[] var4 = new byte[4];
+                        int var1 = var3.read(var4);
+                        if(var1 == 4 && "CTP:".equals(new String(var4))) {
+                            NotifyInfo var5 = new NotifyInfo();
+                            byte[] var6 = new byte[2];
+                            var1 = var3.read(var6);
+                            if(var1 == 2) {
+                                int var7 = BufChangeHex.byteArrayToInt(var6);
+                                byte[] var8 = new byte[var7];
+                                var1 = var3.read(var8);
+                                if(var1 == var7) {
+                                    String var9 = new String(var8);
+                                    if(!TextUtils.isEmpty(var9)) {
+                                        var5.setTopic(var9);
+                                        byte[] var10 = new byte[4];
+                                        var1 = var3.read(var10);
+                                        if(var1 == 4) {
+                                            int var11 = BufChangeHex.byteArrayToInt(var10);
+                                            if(var11 > 0 && var11 < 5242880) {
+                                                byte[] var12 = new byte[var11];
+                                                var1 = var3.read(var12);
+                                                if(var1 == var11) {
+                                                    String var13 = new String(var12);
+                                                    if(!TextUtils.isEmpty(var13)) {
+                                                        try {
+                                                            JSONObject var16 = new JSONObject(var13);
+                                                            var5.setErrorType(var16.optInt("errno"));
+                                                            var5.setOperation(var16.optString("op"));
+                                                            if(!var16.isNull("param")) {
+                                                                JSONObject var17 = var16.optJSONObject("param");
+                                                                Iterator var18 = var17.keys();
+                                                                ArrayMap var19 = new ArrayMap();
+
+                                                                while(var18.hasNext()) {
+                                                                    String var14 = (String)var18.next();
+                                                                    String var15 = var17.optString(var14);
+                                                                    var19.put(var14, var15);
+                                                                }
+
+                                                                var5.setParams(var19);
+                                                            }
+                                                        } catch (JSONException var20) {
+                                                            var20.printStackTrace();
+                                                        }
+                                                    }
+                                                }
+                                            } else {
+                                                var5.setParams((ArrayMap)null);
+                                                var5.setErrorType(0);
+                                                var5.setOperation((String)null);
+                                            }
+
+                                            if(this.mHandlerWeakReference.get() != null) {
+                                                Message var22 = Message.obtain();
+                                                var22.what = 261;
+                                                var22.obj = var5;
+                                                ((Handler)this.mHandlerWeakReference.get()).sendMessage(var22);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    this.mReceiveErrorTime = 0;
+                } 
+
+
